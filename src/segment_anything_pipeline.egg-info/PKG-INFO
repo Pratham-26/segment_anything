@@ -1,0 +1,16 @@
+Metadata-Version: 2.4
+Name: segment-anything-pipeline
+Version: 0.1.0
+Summary: Query-driven auto-labeling with vision LLMs + RF-DETR training
+Requires-Python: >=3.11
+Requires-Dist: litellm
+Requires-Dist: pillow
+Requires-Dist: pyyaml
+Requires-Dist: pypdfium2
+Requires-Dist: fastapi
+Requires-Dist: uvicorn
+Requires-Dist: python-multipart
+Provides-Extra: train
+Requires-Dist: rfdetr; extra == "train"
+Requires-Dist: torch; extra == "train"
+Requires-Dist: pycocotools; extra == "train"

@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "segment-anything-pipeline"
+version = "0.1.0"
+description = "Query-driven auto-labeling with vision LLMs + RF-DETR training"
+requires-python = ">=3.11"
+dependencies = [
+  "litellm",
+  "pillow",
+  "pyyaml",
+  "pypdfium2",
+  "fastapi",
+  "uvicorn",
+  "python-multipart",
+]
+
+[project.optional-dependencies]
+train = ["rfdetr", "torch", "pycocotools"]
+
+[project.scripts]
+sam = "sam.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

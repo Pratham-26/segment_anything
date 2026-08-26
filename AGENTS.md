@@ -29,7 +29,8 @@ Then look at actual code state (`git log`, source tree) before assuming anything
 - [x] PRD
 - [x] State diagram
 - [x] Workflows (CLI + UI)
-- [ ] Core library
-- [ ] CLI
-- [ ] Review UI
-- [ ] Training/results UI
+- [x] Core library (coco, config, ingest, label, gold, split, train, evaluate/benchmark)
+- [x] CLI (`sam`) + FastAPI server (`sam review` / `sam.server`)
+- [x] Review UI (web/ — canvas box editor, demo-mode fallback)
+- [ ] Training/results wiring against real rfdetr (wrappers written, untested on GPU)
+- [ ] Dockerfile + docker-compose
