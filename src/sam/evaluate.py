@@ -1,68 +1,52 @@
 """Evaluate a trained run on the validation split (mAP via pycocotools), and
-score any VLM against gold (benchmark)."""
+score any VLM against gold (benchmark).
+
+Note: rfdetr's own training already writes per-epoch val metrics into
+runs/<run>/metrics.csv; `eval_run` is the standalone re-check with pycocotools.
+"""
 import json
 from pathlib import Path
 
 from . import coco
-from .gold import _by_image, _match, cat_name
+from .gold import _by_image, _match
 
-# ponytail: pycocotools imported lazily; if unavailable, mAP eval fails loudly
-def eval_run(project, run_name):
-    """Compute mAP@50 / mAP@50:95 / per-class AP on the validation split."""
-    from pycocotools.coco import COCO
-    from pycocotools.cocoeval import COCOeval
-    import torch  # noqa: F401  (rfdetr predict needs it)
 
-    from rfdetr import RFDETRBase
+def eval_run(project, run_name, variant="rf-detr-nano"):
+    """Compute mAP@50 / mAP@50:95 / per-class AP on the validation split.
+    Uses rfdetr's own evaluator (same path that produces the training val
+    metrics), so results match the values in the run's metrics.csv.
+    """
+    from rfdetr import RFDETRBase, RFDETRLarge, RFDETRNano
 
     project = Path(project)
     run_dir = project / "runs" / run_name
-    ckpt = next((run_dir / "checkpoint").glob("*.pth"), None)
+    ckpts = sorted(run_dir.glob("*.pth"))
+    pref = next((p for p in ckpts if "best" in p.name and "regular" in p.name), None)
+    ckpt = pref or (ckpts[0] if ckpts else None)
     if ckpt is None:
-        raise SystemExit(f"no checkpoint in {run_dir}/checkpoint/")
+        raise SystemExit(f"no .pth checkpoint in {run_dir}")
 
-    split = json.loads((project / "split.json").read_text())
-    llm = coco.load(project / "annotations" / "llm.coco.json")
-    val_imgs = [i for i in llm["images"] if i["id"] in set(split["val"])]
-    cat_names = {c["id"]: c["name"] for c in llm["categories"]}
-    # pycocotools wants contiguous 1..N category ids; remap
-    remap = {cid: n + 1 for n, cid in enumerate(sorted(cat_names))}
+    # dataset materialized under the same run
+    dataset_dir = run_dir / "dataset"
+    if not dataset_dir.exists():
+        # fallback: any run dataset present (legacy layout)
+        for cand in (project / "runs").glob("*/dataset"):
+            dataset_dir = cand; break
+    if not dataset_dir.exists():
+        raise SystemExit(f"no dataset at {dataset_dir}")
 
-    gt = {"images": [{**i} for i in val_imgs],
-          "annotations": [{**a, "category_id": remap[a["category_id"]]}
-                          for a in llm["annotations"] if a["image_id"] in set(split["val"])],
-          "categories": [{"id": remap[cid], "name": name} for cid, name in cat_names.items()]}
-    gt_path = run_dir / "val_gt.coco.json"
-    coco.save(gt_path, gt)
+    models = {"rf-detr-base": RFDETRBase, "rf-detr-large": RFDETRLarge, "rf-detr-nano": RFDETRNano}
+    model = models.get(variant, RFDETRNano).from_checkpoint(str(ckpt))
+    raw = model.evaluate(dataset_dir=str(dataset_dir), split="val", num_workers=0)
 
-    model = RFDETRBase()
-    model.load_from_checkpoint(str(ckpt))
-    preds = []
-    name_to_cid = {name: cid for cid, name in cat_names.items()}
-    for img in val_imgs:
-        dets = model.predict(str(project / "images" / img["file_name"]))
-        for box, score, cls in zip(dets.boxes, dets.scores, dets.class_names):
-            cid = name_to_cid.get(cls)
-            if cid is None:
-                continue
-            preds.append({"image_id": img["id"], "category_id": remap[cid],
-                          "bbox": [float(v) for v in box], "score": float(score)})
-
-    if not preds:
-        return {"map50": 0.0, "map50_95": 0.0, "per_class": {}}
-
-    coco_gt = COCO(str(gt_path))
-    coco_dt = coco_gt.loadRes(preds)
-    e = COCOeval(coco_gt, coco_dt, "bbox")
-    e.evaluate(); e.accumulate(); e.summarize()
-    per_class = {}
-    for cid, name in cat_names.items():
-        e_c = COCOeval(coco_gt, coco_dt, "bbox")
-        e_c.params.catIds = [remap[cid]]
-        e_c.evaluate(); e_c.accumulate(); e_c.summarize()
-        per_class[name] = round(e_c.stats[1], 4)  # AP@50
-
-    result = {"map50": round(e.stats[1], 4), "map50_95": round(e.stats[0], 4), "per_class": per_class}
+    # raw keys look like "val/mAP_50", "val/mAP_50_95", "val/AP/<class>"
+    per_class = {k.split("/")[-1]: round(float(v), 4) for k, v in raw.items() if k.startswith("val/AP/")}
+    result = {
+        "map50": round(float(raw.get("val/mAP_50", 0)), 4),
+        "map50_95": round(float(raw.get("val/mAP_50_95", 0)), 4),
+        "per_class": per_class,
+        "_raw": {k: round(float(v), 4) for k, v in raw.items()},
+    }
     (run_dir / "metrics.json").write_text(json.dumps(result, indent=2))
     return result
 
@@ -90,13 +74,12 @@ def benchmark(project, model, limit=None):
         path = project / "images" / img["file_name"]
         raw = query_vlm(path, query=query, model=model)
         boxes = to_px(raw, img["width"], img["height"])
-        fake_gold = [{"bbox": b["bbox"], "category_id": b["label"]} for b in boxes]
+        fake_pred = [{"bbox": b["bbox"], "category_id": b["label"]} for b in boxes]
         fake_true = [{"bbox": a["bbox"], "category_id": gold_cat[a["category_id"]]}
                      for a in gold_anns.get(img["id"], [])]
-        pairs = _match(fake_gold, fake_true)
-        # keep only same-class pairs as true matches
+        pairs = _match(fake_pred, fake_true)
         same = sum(1 for gi, ti in pairs
-                   if fake_gold[gi]["category_id"] == fake_true[ti]["category_id"])
+                   if fake_pred[gi]["category_id"] == fake_true[ti]["category_id"])
         matched += same
         spurious += len(boxes) - same
         missed += len(fake_true) - same

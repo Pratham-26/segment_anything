@@ -72,7 +72,7 @@ def train(project, variant="rf-detr-base", epochs=100, run_name=None):
         epochs=epochs,
         batch_size=4,
         grad_accum_steps=4,
-        dest_dir=str(project / "runs" / run_name),
+        output_dir=str(project / "runs" / run_name),
     )
     return {"run": run_name, "variant": variant, "epochs": epochs, **counts}
 
