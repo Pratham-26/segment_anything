@@ -4,7 +4,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import coco, gold, ingest, label, split as split_mod, train as train_mod, evaluate as evaluate_mod
+from . import gold, ingest, label, split as split_mod, train as train_mod, evaluate as evaluate_mod
 from .config import load_config
 
 

@@ -11,7 +11,7 @@ from . import coco
 from .gold import _by_image, _match
 
 
-def eval_run(project, run_name, variant="rf-detr-nano"):
+def eval_run(project, run_name):
     """Compute mAP@50 / mAP@50:95 / per-class AP on the validation split.
     Uses rfdetr's own evaluator (same path that produces the training val
     metrics), so results match the values in the run's metrics.csv.
@@ -20,7 +20,7 @@ def eval_run(project, run_name, variant="rf-detr-nano"):
     try: sys.stdout.reconfigure(encoding="utf-8")
     except Exception: pass
     os.environ["PYTHONIOENCODING"] = "utf-8"  # ponytail: rich tables need utf-8 on Windows
-    from rfdetr import RFDETRBase, RFDETRLarge, RFDETRNano
+    from rfdetr import RFDETRNano
 
     project = Path(project)
     run_dir = project / "runs" / run_name
@@ -39,8 +39,7 @@ def eval_run(project, run_name, variant="rf-detr-nano"):
     if not dataset_dir.exists():
         raise SystemExit(f"no dataset at {dataset_dir}")
 
-    models = {"rf-detr-base": RFDETRBase, "rf-detr-large": RFDETRLarge, "rf-detr-nano": RFDETRNano}
-    model = models.get(variant, RFDETRNano).from_checkpoint(str(ckpt))
+    model = RFDETRNano.from_checkpoint(str(ckpt))
     raw = model.evaluate(dataset_dir=str(dataset_dir), split="val", num_workers=0)
 
     # raw keys look like "val/mAP_50", "val/mAP_50_95", "val/AP/<class>"

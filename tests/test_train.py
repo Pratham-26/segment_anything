@@ -2,6 +2,7 @@
 
 Key invariant under test: gold annotations win over llm for images they cover.
 """
+import copy
 import json
 import shutil
 import tempfile
@@ -31,7 +32,7 @@ def _proj_with_split(with_gold=True):
     coco.save(d / "annotations" / "llm.coco.json", llm)
 
     if with_gold:
-        gold = coco.clone(llm)
+        gold = copy.deepcopy(llm)
         gold["images"] = [llm["images"][0]]
         gold["annotations"] = [{"id": 1, "image_id": 1, "category_id": 1,
                                 "bbox": [50, 50, 25, 25], "area": 625, "iscrowd": 0}]  # corrected box

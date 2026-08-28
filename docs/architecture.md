@@ -32,8 +32,7 @@ segment_anything/
 │   ├── gold.py             # diff llm vs gold → correction-rate metric
 │   ├── split.py            # val = 10% seeded, gold forced in, no leakage
 │   ├── train.py            # rfdetr wrapper → runs/<run_id>/
-│   ├── evaluate.py         # mAP@50 / @50:95 / per-class AP on validation
-│   ├── benchmark.py        # run any VLM on images, score vs gold
+│   ├── evaluate.py         # mAP@50 / @50:95 / per-class AP on validation; VLM-vs-gold benchmark
 │   └── server.py           # FastAPI: static files + REST endpoints over core functions
 ├── web/
 │   ├── index.html          # tabs: Ingest / Label / Review / Train / Results
@@ -57,4 +56,4 @@ segment_anything/
 1. `coco.py`, `config.py`, project scaffold
 2. `ingest.py`, `label.py`, `split.py`, `gold.py` + CLI → agents fully functional
 3. `server.py` + web review editor
-4. `train.py`, `evaluate.py`, `benchmark.py` + results tab
+4. `train.py`, `evaluate.py` (incl. VLM-vs-gold benchmark) + results tab

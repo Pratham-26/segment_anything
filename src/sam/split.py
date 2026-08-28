@@ -1,5 +1,6 @@
 """Validation split: 10% of the dataset (seeded, deterministic); all gold
 images are forced into validation and never trained on."""
+import json
 import random
 from pathlib import Path
 
@@ -37,5 +38,5 @@ def make_split(project, val_frac=0.1):
     split = {"train": train, "val": val,
              "gold_in_val": sorted(gold_ids), "seed": SEED}
     out = project / "split.json"
-    out.write_text(__import__("json").dumps(split, indent=2))
+    out.write_text(json.dumps(split, indent=2))
     return split

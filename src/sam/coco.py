@@ -1,5 +1,4 @@
 """Minimal COCO format helpers shared by all pipeline stages."""
-import copy
 import json
 
 
@@ -25,7 +24,3 @@ def category_id(coco, name):
     new_id = max((c["id"] for c in coco["categories"]), default=0) + 1
     coco["categories"].append({"id": new_id, "name": name})
     return new_id
-
-
-def clone(coco):
-    return copy.deepcopy(coco)

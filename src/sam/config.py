@@ -4,8 +4,6 @@ from pathlib import Path
 DEFAULTS = {
     "query": None,
     "vlm": None,
-    "variant": "rf-detr-base",
-    "val_frac": 0.1,
 }
 
 

@@ -444,7 +444,7 @@ $("#label-form").addEventListener("submit", async e => {
   logLine("#label-log", `labeling with ${vlm}… (one VLM call per image; slow)`);
   try {
     const r = await api(`/api/label?query=${encodeURIComponent($("#query-input").value)}&model=${encodeURIComponent(vlm)}`);
-    logLine("#label-log", `labeled ${r.labeled ?? "?"}${r.failures?.length ? `, ${r.failures.length} failed` : ""}`);
+    logLine("#label-log", `labeled ${r.labeled ?? "?"}${r.failed_images?.length ? `, ${r.failed_images.length} failed` : ""}`);
     await loadReal();
   } catch (err) { logLine("#label-log", `label failed: ${err.message}`); }
 });

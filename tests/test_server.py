@@ -28,11 +28,10 @@ def _mkproj(with_data=True):
 def test_config_defaults_and_roundtrip():
     d = _mkproj(with_data=False)
     cfg = load_config(d)
-    assert cfg["variant"] == "rf-detr-base" and cfg["val_frac"] == 0.1  # defaults
+    assert cfg["query"] is None and cfg["vlm"] is None  # defaults
     save_config(d, {"query": "boxes of cats", "vlm": "gpt-4o"})
     cfg = load_config(d)
     assert cfg["query"] == "boxes of cats" and cfg["vlm"] == "gpt-4o"
-    assert cfg["variant"] == "rf-detr-base"  # unset keys keep defaults
     shutil.rmtree(d)
 
 

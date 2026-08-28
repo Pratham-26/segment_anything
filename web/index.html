@@ -10,7 +10,7 @@
   STORY: upload → label → inspect each frame on the light table → fix into gold →
   train → read results. The human only touches what the VLM got wrong.
   FIRST VIEWPORT: full-bleed lit canvas center-right with current frame under
-  hairline reticle guides; translucent tool tray floating left; filmstrip queue
+  hairline guides; translucent tool tray floating left; filmstrip queue
   along the bottom edge; stage rail (ingest/label/review/train/results) top.
   FORM: chosen alternate (IMPECCABLE'S PICK), seed key 98f5042f.
   FINISH: unreviewed and undocumented is unfinished; this build ends with the
@@ -66,8 +66,6 @@
   <figure class="light-table" id="canvas-wrap">
     <canvas id="editor" aria-label="Annotation canvas"></canvas>
     <figcaption class="sr-only">Current image with editable bounding boxes</figcaption>
-    <div class="reticle-h" aria-hidden="true"></div>
-    <div class="reticle-v" aria-hidden="true"></div>
   </figure>
 
   <footer class="filmstrip" id="filmstrip" aria-label="Image queue"></footer>
@@ -114,7 +112,6 @@
     <label>Epochs <input type="number" id="epochs-input" value="100" min="1"></label>
     <button class="btn btn-primary" type="submit">Start run</button>
   </form>
-  <div class="split-summary mono" id="split-summary"></div>
   <div class="run-list mono" id="run-list"></div>
 </section>
 

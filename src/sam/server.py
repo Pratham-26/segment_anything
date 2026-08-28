@@ -98,6 +98,3 @@ def create_app(project: str = ".") -> FastAPI:
 
     app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
     return app
-
-
-app = create_app  # uvicorn sam.server:app --factory

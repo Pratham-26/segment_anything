@@ -28,7 +28,7 @@ def test_ingest_dedups_and_numbers():
     _mkimg(src / "a.png", color=(10, 10, 10))
     _mkimg(src / "b.png", color=(20, 20, 20))
     _mkimg(src / "a_dup.png", color=(10, 10, 10))          # same bytes as a.png
-    _mkimg(src / "a.png" if False else src / "a2.png", color=(30, 30, 30))  # same NAME, diff bytes
+    _mkimg(src / "a2.png", color=(30, 30, 30))  # same NAME pattern, diff bytes
 
     s1 = ingest([src / "a.png", src / "b.png"], d)
     assert s1["copied"] == 2 and s1["skipped"] == 0, s1
