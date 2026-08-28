@@ -15,6 +15,7 @@ Read in this order when (re-)orienting:
 Then look at actual code state (`git log`, source tree) before assuming anything is implemented — docs may be ahead of or behind the code.
 
 ## Conventions
+- Use **uv** for all package management: `uv sync` (runtime + dev/test deps), `uv sync --extra train` (adds torch/rfdetr/pycocotools for GPU training), `uv run sam ...` / `uv run pytest` to run inside the venv. `uv.lock` is committed; heavy train deps stay optional and are never installed by default.
 - Docs live in `docs/`. Update the relevant doc when scope changes — don't let docs drift from decisions made in conversation.
 - **questions.md protocol**: agents put open questions there; the owner answers inline; once the answer is incorporated into docs/code, remove that Q&A block. Never delete unanswered questions.
 - Key invariants to respect in any implementation:

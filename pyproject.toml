@@ -26,5 +26,8 @@ sam = "sam.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.uv]
+link-mode = "copy"  # cache and venv on different drives (Windows)
+
 [dependency-groups]
 dev = ["pytest", "httpx", "playwright"]

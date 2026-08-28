@@ -6,8 +6,8 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY src ./src
 COPY web ./web
-RUN pip install --no-cache-dir -e . \
-    && pip cache purge
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+RUN uv pip install --system --no-cache -e .
 
 # project data lives on host; bind-mount it to /data
 WORKDIR /data
