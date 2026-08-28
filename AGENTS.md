@@ -32,5 +32,5 @@ Then look at actual code state (`git log`, source tree) before assuming anything
 - [x] Core library (coco, config, ingest, label, gold, split, train, evaluate/benchmark)
 - [x] CLI (`sam`) + FastAPI server (`sam review` / `sam.server`)
 - [x] Review UI (web/ — canvas box editor, demo-mode fallback)
-- [ ] Training/results wiring against real rfdetr (wrappers written, untested on GPU)
-- [ ] Dockerfile + docker-compose
+- [ ] Training/results wiring against real rfdetr (wrappers + rfdetr evaluator wired, untested on GPU)
+- [x] Dockerfile + docker-compose (CPU base; GPU variant via build-arg / compose comment, untested)

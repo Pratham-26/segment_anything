@@ -204,3 +204,5 @@ select, input[type="text"], input[type="number"] {
   .empty-state { inset: 0; }
   .reticle-v { display: none !important; }
 }
+
+.pc-row { display: flex; justify-content: space-between; gap: 24px; padding: 8px 0; border-bottom: 1px solid var(--hairline); font-size: 13px; }

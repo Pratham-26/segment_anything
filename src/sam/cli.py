@@ -23,6 +23,7 @@ def main(argv=None):
 
     s = sub.add_parser("review", help="open the annotation web UI")
     s.add_argument("--port", type=int, default=8000)
+    s.add_argument("--host", default="127.0.0.1")
 
     s = sub.add_parser("accept-all", help="promote llm -> gold unedited")
 
@@ -55,8 +56,8 @@ def main(argv=None):
         import uvicorn
         from .server import create_app
         app = create_app(P)
-        print(f"review UI: http://127.0.0.1:{a.port}  (project: {P.resolve()})")
-        uvicorn.run(app, host="127.0.0.1", port=a.port)
+        print(f"review UI: http://{a.host}:{a.port}  (project: {P.resolve()})")
+        uvicorn.run(app, host=a.host, port=a.port)
         return 0
     elif a.cmd == "accept-all":
         out = {"gold": gold.promote(P)}

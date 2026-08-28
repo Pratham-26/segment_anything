@@ -410,21 +410,72 @@ $$(".stage").forEach(b => b.addEventListener("click", () => {
   b.classList.add("is-active");
   $$(".tab").forEach(t => t.classList.remove("is-active"));
   $(`#tab-${b.dataset.tab}`).classList.add("is-active");
+  if (b.dataset.tab === "results") loadResults();
 }));
 
-/* ---------- ingest / label / train forms (wire when server lands) ---------- */
-$("#dropzone").addEventListener("click", () => logLine("#ingest-log", state.live ? "file picker not wired yet — use `sam ingest`" : "demo mode — attach the server to ingest"));
-$("#label-form").addEventListener("submit", e => {
+/* ---------- ingest / label / train / results wiring ---------- */
+const dropzone = $("#dropzone");
+const fileInput = Object.assign(document.createElement("input"), { type: "file", multiple: true, accept: "image/*,.pdf" });
+fileInput.style.display = "none";
+dropzone.appendChild(fileInput);
+dropzone.addEventListener("click", () => fileInput.click());
+dropzone.addEventListener("dragover", e => { e.preventDefault(); dropzone.classList.add("is-over"); });
+dropzone.addEventListener("dragleave", () => dropzone.classList.remove("is-over"));
+dropzone.addEventListener("drop", e => { e.preventDefault(); dropzone.classList.remove("is-over"); uploadFiles(e.dataTransfer.files); });
+fileInput.addEventListener("change", () => uploadFiles(fileInput.files));
+
+async function uploadFiles(files) {
+  if (!state.live || !files.length) return;
+  const fd = new FormData();
+  for (const f of files) fd.append("files", f);
+  logLine("#ingest-log", `uploading ${files.length} file(s)…`);
+  try {
+    const r = await api("/api/ingest", { method: "POST", body: fd });
+    logLine("#ingest-log", `copied ${r.copied}, skipped ${r.skipped}`);
+    await loadReal();
+  } catch (err) { logLine("#ingest-log", `ingest failed: ${err.message}`); }
+  fileInput.value = "";
+}
+
+$("#label-form").addEventListener("submit", async e => {
   e.preventDefault();
-  logLine("#label-log", state.live
-    ? `POST /api/label {query, vlm} — endpoint pending server.py`
-    : `[demo] would run: sam label --query "${$("#query-input").value}" --vlm "${$("#vlm-input").value}"`);
+  if (!state.live) { logLine("#label-log", `[demo] sam label --query "${$("#query-input").value}" --vlm "${$("#vlm-input").value}"`); return; }
+  const vlm = $("#vlm-input").value;
+  logLine("#label-log", `labeling with ${vlm}… (one VLM call per image; slow)`);
+  try {
+    const r = await api(`/api/label?query=${encodeURIComponent($("#query-input").value)}&model=${encodeURIComponent(vlm)}`);
+    logLine("#label-log", `labeled ${r.labeled ?? "?"}${r.failures?.length ? `, ${r.failures.length} failed` : ""}`);
+    await loadReal();
+  } catch (err) { logLine("#label-log", `label failed: ${err.message}`); }
 });
-$("#train-form").addEventListener("submit", e => {
+
+$("#train-form").addEventListener("submit", async e => {
   e.preventDefault();
-  logLine("#run-list", state.live ? "POST /api/train — endpoint pending server.py"
-    : `[demo] rf-detr variant=${$("#variant-select").value} epochs=${$("#epochs-input").value}`);
+  if (!state.live) { logLine("#run-list", `[demo] variant=${$("#variant-select").value} epochs=${$("#epochs-input").value}`); return; }
+  logLine("#run-list", "training started — split runs automatically (10% val, gold forced into val)");
+  try {
+    const r = await api(`/api/train?variant=${$("#variant-select").value}&epochs=${$("#epochs-input").value}`);
+    logLine("#run-list", `done: run=${r.run} train=${r.train_images} val=${r.val_images}`);
+    loadResults();
+  } catch (err) { logLine("#run-list", `train failed: ${err.message}`); }
 });
+
+async function loadResults() {
+  if (!state.live) return;
+  try {
+    const m = await api("/api/metrics");
+    $('[data-metric="map50"]').textContent = m.map50;
+    $('[data-metric="map5095"]').textContent = m.map50_95;
+    const rows = Object.entries(m.per_class ?? {})
+      .map(([k, v]) => `<div class="pc-row mono"><span>${k}</span><span>${v}</span></div>`).join("");
+    $("#per-class").innerHTML = rows || "<p class='tray-hint'>no per-class AP in this run.</p>";
+  } catch { /* no runs with metrics yet */ }
+  try {
+    const c = await api("/api/corrections");
+    $('[data-metric="corr"]').textContent = c.correction_rate;
+  } catch { /* no gold yet */ }
+}
+
 function logLine(sel, text) {
   $(sel).textContent += text + "\n";
 }

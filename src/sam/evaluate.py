@@ -16,6 +16,10 @@ def eval_run(project, run_name, variant="rf-detr-nano"):
     Uses rfdetr's own evaluator (same path that produces the training val
     metrics), so results match the values in the run's metrics.csv.
     """
+    import os, sys
+    try: sys.stdout.reconfigure(encoding="utf-8")
+    except Exception: pass
+    os.environ["PYTHONIOENCODING"] = "utf-8"  # ponytail: rich tables need utf-8 on Windows
     from rfdetr import RFDETRBase, RFDETRLarge, RFDETRNano
 
     project = Path(project)

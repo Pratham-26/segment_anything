@@ -79,12 +79,18 @@ def create_app(project: str = ".") -> FastAPI:
     def do_split(val_frac: float = 0.1):
         return split_mod.make_split(P, val_frac=val_frac)
 
+    @app.get("/api/metrics")
     @app.get("/api/metrics/{run}")
-    def metrics(run: str):
-        m = P / "runs" / run / "metrics.json"
-        if not m.exists():
+    def metrics(run: str | None = None):
+        if run:
+            m = P / "runs" / run / "metrics.json"
+        else:
+            latest = max((d for d in (P / "runs").glob("*") if (d / "metrics.json").exists()),
+                         key=lambda d: d.name, default=None)
+            m = latest / "metrics.json" if latest else None
+        if not m or not m.exists():
             return JSONResponse({"error": "no metrics"}, status_code=404)
-        return coco.load(m)
+        return {**coco.load(m), "run": m.parent.name}
 
     @app.get("/api/benchmark")
     def benchmark(model: str, limit: int | None = None):

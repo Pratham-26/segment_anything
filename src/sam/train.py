@@ -54,10 +54,18 @@ def materialize_dataset(project, split, dest):
 
 def train(project, variant="rf-detr-base", epochs=100, run_name=None):
     """Train RF-DETR. Returns run dir. Requires torch + rfdetr installed."""
+    import os, sys
+    try: sys.stdout.reconfigure(encoding="utf-8")
+    except Exception: pass
+    os.environ["PYTHONIOENCODING"] = "utf-8"  # ponytail: rich box-drawing fails on cp1252 Windows console
     from rfdetr import RFDETRBase, RFDETRLarge, RFDETRNano  # lazy: heavy
 
     project = Path(project)
-    split = json.loads((project / "split.json").read_text())
+    split_path = project / "split.json"
+    if not split_path.exists():  # deterministic; gold must already be saved
+        from . import split as split_mod
+        split_mod.make_split(project)
+    split = json.loads(split_path.read_text())
     run_name = run_name or datetime_dirname()
     dest = project / "runs" / run_name / "dataset"
     counts = materialize_dataset(project, split, dest)
@@ -73,6 +81,7 @@ def train(project, variant="rf-detr-base", epochs=100, run_name=None):
         batch_size=4,
         grad_accum_steps=4,
         output_dir=str(project / "runs" / run_name),
+        num_workers=0,  # ponytail: avoids Windows spawn crash; bump if Linux + large data
     )
     return {"run": run_name, "variant": variant, "epochs": epochs, **counts}
 
