@@ -41,6 +41,7 @@ uv run sam train --variant rf-detr-nano --epochs 50   # needs --extra train
 uv run sam eval <run_name>               # metrics on the val set
 uv run sam benchmark --vlm gpt-4o        # score the VLM itself against gold
 uv run sam corrections                   # llm-vs-gold correction stats
+uv run sam export                        # COCO zip (gold wins); --split for train/valid layout
 ```
 
 In the review UI: `d` enters draw mode, `b` returns to browse, click selects a
@@ -56,6 +57,11 @@ docker build --build-arg BASE=pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime -t s
 ```
 
 Project data is bind-mounted at `/data`.
+
+Exports: `sam export` writes `<project>/exports/<name>.zip` — images plus a
+merged `_annotations.coco.json` (gold corrections applied, llm boxes kept
+everywhere else). `--split` emits rfdetr's `train/valid` layout using the
+project split. `GET /api/export` streams the same zip.
 
 ## Project layout
 

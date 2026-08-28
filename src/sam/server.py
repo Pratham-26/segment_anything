@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import coco, gold, ingest, label, split as split_mod, train as train_mod, evaluate as evaluate_mod
+from . import export as export_mod
 from .config import load_config
 
 WEB_DIR = Path(__file__).resolve().parent.parent.parent / "web"
@@ -95,6 +96,11 @@ def create_app(project: str = ".") -> FastAPI:
     @app.get("/api/benchmark")
     def benchmark(model: str, limit: int | None = None):
         return evaluate_mod.benchmark(P, model=model, limit=limit)
+
+    @app.get("/api/export")
+    def export_zip(split: bool = False):
+        path = export_mod.export_project(P, with_split=split)
+        return FileResponse(path, filename=path.name, media_type="application/zip")
 
     app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
     return app

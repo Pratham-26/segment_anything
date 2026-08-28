@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from . import gold, ingest, label, split as split_mod, train as train_mod, evaluate as evaluate_mod
+from . import export as export_mod
 from .config import load_config
 
 
@@ -43,6 +44,10 @@ def main(argv=None):
 
     s = sub.add_parser("corrections", help="llm-vs-gold correction stats")
 
+    s = sub.add_parser("export", help="export dataset as COCO zip (gold wins over llm)")
+    s.add_argument("--split", action="store_true", help="rfdetr train/valid layout using the project split")
+    s.add_argument("--out", default=None, help="zip path (default <project>/exports/<name>.zip)")
+
     s = sub.add_parser("status", help="project summary")
 
     a = p.parse_args(argv)
@@ -71,6 +76,8 @@ def main(argv=None):
         out = evaluate_mod.benchmark(P, model=a.vlm, limit=a.limit)
     elif a.cmd == "corrections":
         out = gold.diff_stats(P)
+    elif a.cmd == "export":
+        out = {"zip": str(export_mod.export_project(P, out=a.out, with_split=a.split))}
     elif a.cmd == "status":
         cfg = load_config(P)
         imgs = P / "images"

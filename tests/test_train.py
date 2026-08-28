@@ -4,6 +4,7 @@ Key invariant under test: gold annotations win over llm for images they cover.
 """
 import copy
 import json
+import copy
 import shutil
 import tempfile
 from pathlib import Path
