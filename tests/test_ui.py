@@ -174,3 +174,26 @@ def test_live_save_writes_gold_coco(browsers, live_url):
         assert llm["annotations"][0]["bbox"] == [20, 20, 60, 40]  # llm untouched
     finally:
         page.context.browser.close()
+
+
+def test_live_export_button_downloads_zip(browsers, live_url):
+    url, proj = live_url
+    page = browsers.chromium.launch().new_page()
+    try:
+        page.goto(url)
+        _wait_boot(page, 1)
+        page.click("[data-tab='results']")  # export lives in the Results tab
+        assert page.locator(".export-row").is_visible()  # live mode shows export
+
+        with page.expect_download() as dl:
+            page.click(".export-row a:first-child")
+        download = dl.value
+        assert download.suggested_filename.endswith(".zip")
+        import zipfile
+        path = download.path()
+        with zipfile.ZipFile(path) as z:
+            names = z.namelist()
+        assert "_annotations.coco.json" in names
+        assert "img1.png" in names
+    finally:
+        page.context.browser.close()

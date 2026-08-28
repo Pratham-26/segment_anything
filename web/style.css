@@ -178,6 +178,8 @@ select, input[type="text"], input[type="number"] {
 .label-form input[type="text"] { width: 320px; max-width: 70vw; }
 
 .results-grid { display: flex; flex-wrap: wrap; gap: 32px; align-items: start; }
+.export-row { display: flex; gap: 12px; margin-top: 24px; }
+.export-row .btn { text-decoration: none; display: inline-flex; align-items: center; }
 .metric-table { border-collapse: collapse; font-size: 14px; }
 .metric-table th {
   text-align: left; font-weight: 400; font-size: 11px; letter-spacing: 0.08em;

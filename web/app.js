@@ -39,6 +39,7 @@ async function boot() {
     $("#project-status").textContent = "demo data — no server attached";
     loadDemo();
   }
+  $$(".needs-server").forEach(el => el.style.display = state.live ? "" : "none");
 }
 
 async function loadReal() {
