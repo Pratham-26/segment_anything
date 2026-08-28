@@ -27,7 +27,7 @@ def main(argv=None):
 
     s = sub.add_parser("accept-all", help="promote llm -> gold unedited")
 
-    s = sub.add_parser("split", help="build train/val split (val=10%, gold forced in)")
+    s = sub.add_parser("split", help="build train/val split (val=10%%, gold forced in)")
     s.add_argument("--val-frac", type=float, default=0.1)
 
     s = sub.add_parser("train", help="train RF-DETR")
