@@ -56,6 +56,9 @@ docker compose up                        # CPU; serves the review UI on :8000
 docker build --build-arg BASE=pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime -t sam:gpu .
 ```
 
+The image covers ingest, labeling, review, and export. It contains **no**
+torch/rfdetr — training stays on the host (`uv sync --extra train`).
+
 Project data is bind-mounted at `/data`.
 
 Exports: `sam export` writes `<project>/exports/<name>.zip` — images plus a

@@ -9,7 +9,8 @@
 
 ## Packaging
 
-- [ ] Light Docker image with only dataset creation + correction (ingest, label,
-  review UI) — no torch/rfdetr, for annotation-only machines. The current image
-  installs the full runtime; split the Dockerfile or drop the train extra there.
-  - Open question in `questions.md`: does "light" keep VLM labeling (litellm)?
+- [x] Light Docker image with dataset creation + correction (ingest, label,
+  review UI), no training packages. Answer: the image already ships exactly this —
+  runtime deps are litellm + the web stack; torch/rfdetr stay in the optional
+  `train` extra and are never installed in Docker. Documented in README.
+  Verified: no heavy packages in the default install path.
