@@ -24,7 +24,7 @@ segment_anything/
 │   ├── workflows.md        # exists
 │   └── architecture.md     # this file
 ├── src/sam/
-│   ├── cli.py              # argparse entry: ingest|label|review|accept-all|split|train|eval|benchmark|corrections|status
+│   ├── cli.py              # argparse entry: ingest|label|review|accept-all|split|train|eval|benchmark|corrections|export|status
 │   ├── config.py           # project/config.yaml load/save (query, vlm, variant, val_frac)
 │   ├── ingest.py           # copy/hash images, split PDFs → page PNGs
 │   ├── label.py            # LiteLLM calls (cached), parse → annotations/llm.coco.json
@@ -33,6 +33,7 @@ segment_anything/
 │   ├── split.py            # val = 10% seeded, gold forced in, no leakage
 │   ├── train.py            # rfdetr wrapper → runs/<run_id>/
 │   ├── evaluate.py         # mAP@50 / @50:95 / per-class AP on validation; VLM-vs-gold benchmark
+│   ├── export.py           # project → COCO zip (gold-wins merge; --split → train/valid layout)
 │   └── server.py           # FastAPI: static files + REST endpoints over core functions
 ├── web/
 │   ├── index.html          # tabs: Ingest / Label / Review / Train / Results
@@ -40,17 +41,22 @@ segment_anything/
 │   └── style.css
 └── tests/
     └── test_*.py           # split leakage rule, COCO roundtrip, correction-rate diff
-├── Dockerfile              # python-slim (CPU) / CUDA-torch variant for GPU training
-└── docker-compose.yml      # one service; bind-mounted project dir; gpu reserve block
+├── projects/               # on-host project data; bind-mounted as /data in containers
+├── docker/
+│   ├── annotation.Dockerfile  # CPU image: labeling + review UI service
+│   └── train.Dockerfile       # train/eval job container: slim base, CUDA via pip torch wheels
+└── docker-compose.yml      # annotation (long-running) + train (profiles: [train], GPU)
 ```
 
 ## Layering rule
 `cli.py` and `server.py` may only call `src/sam/*` core functions — no business logic in either. Agents (CLI) and humans (UI) therefore always see identical project state.
 
 ## Docker-native
-- Everything runs in the container: `docker compose up` starts the FastAPI UI; same image exposes `sam` CLI (`docker compose run sam ingest ...`) so agents use it too
+- Two services in `docker-compose.yml`, both bind-mount `./projects:/data`:
+  - `annotation` — CPU, LLM labeling + review UI (`docker compose up -d`); LiteLLM keys via optional `.env`
+  - `train` — GPU job container, `profiles: [train]`; run on demand: `docker compose run --rm train train --project /data/<proj>`
 - Project dir always bind-mounted → all state on host, container disposable
-- CPU image by default; GPU via compose gpu-reserve + CUDA torch base tag — same code path
+- Train image: torch+CUDA via pip wheels on a slim base; annotation image stays slim
 
 ## Build order (from workflows.md)
 1. `coco.py`, `config.py`, project scaffold

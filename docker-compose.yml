@@ -1,15 +1,34 @@
 services:
-  app:
-    build: .
+  # LLM annotation service: labeling + review UI. Long-running.
+  annotation:
+    build:
+      context: .
+      dockerfile: docker/annotation.Dockerfile
     ports:
       - "8000:8000"
     volumes:
-      - .:/data
-    # GPU: uncomment to reserve a GPU (requires nvidia-container-toolkit)
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+      - ./projects:/data
+    # LiteLLM keys/model config go here; never bake them into the image
+    env_file:
+      - path: .env
+        required: false
+
+  # Training/eval job container. Started on demand, not by `up`.
+  #   docker compose run --rm train train --project /data/myproj
+  #   docker compose run --rm train eval  --project /data/myproj --run <run>
+  train:
+    build:
+      context: .
+      dockerfile: docker/train.Dockerfile
+    profiles: [train]
+    volumes:
+      - ./projects:/data
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

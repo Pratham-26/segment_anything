@@ -4,8 +4,6 @@ import json
 import sys
 from pathlib import Path
 
-from . import gold, ingest, label, split as split_mod, train as train_mod, evaluate as evaluate_mod
-from . import export as export_mod
 from .config import load_config
 
 
@@ -54,8 +52,10 @@ def main(argv=None):
     P = Path(a.project)
 
     if a.cmd == "ingest":
+        from . import ingest
         out = ingest.ingest(a.paths, P)
     elif a.cmd == "label":
+        from . import label
         out = label.label_project(P, query=a.query, model=a.vlm, limit=a.limit)
     elif a.cmd == "review":
         import uvicorn
@@ -65,20 +65,28 @@ def main(argv=None):
         uvicorn.run(app, host=a.host, port=a.port)
         return 0
     elif a.cmd == "accept-all":
+        from . import gold
         out = {"gold": gold.promote(P)}
     elif a.cmd == "split":
+        from . import split as split_mod
         out = split_mod.make_split(P, val_frac=a.val_frac)
     elif a.cmd == "train":
+        from . import train as train_mod
         out = train_mod.train(P, variant=a.variant, epochs=a.epochs)
     elif a.cmd == "eval":
+        from . import evaluate as evaluate_mod
         out = evaluate_mod.eval_run(P, a.run)
     elif a.cmd == "benchmark":
+        from . import evaluate as evaluate_mod
         out = evaluate_mod.benchmark(P, model=a.vlm, limit=a.limit)
     elif a.cmd == "corrections":
+        from . import gold
         out = gold.diff_stats(P)
     elif a.cmd == "export":
+        from . import export as export_mod
         out = {"zip": str(export_mod.export_project(P, out=a.out, with_split=a.split))}
     elif a.cmd == "status":
+        from . import gold
         cfg = load_config(P)
         imgs = P / "images"
         out = {

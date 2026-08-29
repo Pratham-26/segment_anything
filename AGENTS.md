@@ -34,4 +34,4 @@ Then look at actual code state (`git log`, source tree) before assuming anything
 - [x] CLI (`sam`) + FastAPI server (`sam review` / `sam.server`)
 - [x] Review UI (web/ — canvas box editor, demo-mode fallback)
 - [ ] Training/results wiring against real rfdetr (wrappers + rfdetr evaluator wired, untested on GPU)
-- [x] Dockerfile + docker-compose (CPU base; GPU variant via build-arg / compose comment, untested)
+- [x] Docker + docker-compose (`docker/annotation.Dockerfile` service + `docker/train.Dockerfile` GPU job container, untested on GPU)

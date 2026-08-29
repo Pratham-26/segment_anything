@@ -7,3 +7,8 @@ __pycache__/
 .cursor/
 src/*.egg-info/
 .venv/
+projects/*
+!projects/README.md
+.env
+node_modules/
+package*.json

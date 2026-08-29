@@ -52,14 +52,12 @@ Without a server attached the UI runs on synthetic demo data.
 ## Docker
 
 ```bash
-docker compose up                        # CPU; serves the review UI on :8000
-docker build --build-arg BASE=pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime -t sam:gpu .
+docker compose up                                            # annotation: labeling + review UI on :8000
+docker compose run --rm train train --project /data/myproj   # train/eval GPU job
 ```
 
-The image covers ingest, labeling, review, and export. It contains **no**
-torch/rfdetr — training stays on the host (`uv sync --extra train`).
-
-Project data is bind-mounted at `/data`.
+`annotation` is a slim CPU image (no torch/rfdetr); `train` is a GPU job
+container with the training stack. Project data is bind-mounted at `/data`.
 
 Exports: `sam export` writes `<project>/exports/<name>.zip` — images plus a
 merged `_annotations.coco.json` (gold corrections applied, llm boxes kept
