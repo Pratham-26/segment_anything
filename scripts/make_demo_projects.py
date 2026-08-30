@@ -274,7 +274,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--root", default=str(ROOT / "projects"))
     ap.add_argument("--api-key", default=os.environ.get("OPENROUTER_API_KEY"))
-    ap.add_argument("--vlm-forms", default="openrouter/minimax/minimax-m3:free")
+    ap.add_argument("--vlm-forms", default="openrouter/dots-studio/dots-3-note-preview:free")
     ap.add_argument("--vlm-scenes", default="openrouter/dots-studio/dots-3-note-preview:free")
     ap.add_argument("--vlm-invoices", default="openrouter/openrouter/free")
     ap.add_argument("--images", type=int, default=8)
