@@ -1,17 +1,18 @@
-/* Annotation Light Table — committed world: charcoal bench, lit glass canvas,
-   ivory ink, teal = gold/confirmed, red = reject. Mono carries every measurement. */
+/* Annotation Light Table — committed world: near-black green-cast bench, lit glass
+   canvas, pale sage ink, phosphor green = gold/confirmed/primary, amber = "needs
+   eyes", red = reject. Mono carries every measurement. */
 :root {
-  --bench: #14161a;
-  --bench-raised: #1c1f24;
-  --glass-glow: #f4f1e8;
-  --ink: #e6e2d8;
-  --ink-dim: #9a968b;      /* on-bench secondary, warm-tinted not gray */
-  --ink-faint: #8a857a;   /* ≥4.5:1 on --bench for small labels */
-  --teal: #4cc2a8;
-  --red: #e05656;
-  --amber: #e8a13c;
-  --hairline: rgba(230, 226, 216, 0.14);
-  --hairline-strong: rgba(230, 226, 216, 0.3);
+  --bench: #0a0d0a;
+  --bench-raised: #121713;
+  --glass-glow: #eaf6ee;
+  --ink: #e4eae2;
+  --ink-dim: #a0ab9f;      /* on-bench secondary, green-tinted not gray */
+  --ink-faint: #8b968a;    /* ≥4.5:1 on --bench for small labels */
+  --green: #3ecf8e;
+  --red: #e0565b;
+  --amber: #e5b054;
+  --hairline: rgba(228, 234, 226, 0.14);
+  --hairline-strong: rgba(228, 234, 226, 0.3);
   --sans: "Archivo", system-ui, -apple-system, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, monospace;
   --tray-w: 240px;
@@ -29,8 +30,8 @@ body {
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
-::selection { background: var(--teal); color: var(--bench); }
-:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+::selection { background: var(--green); color: var(--bench); }
+:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 * { scrollbar-width: thin; scrollbar-color: var(--hairline-strong) transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-thumb { background: var(--hairline-strong); border-radius: 4px; }
@@ -49,7 +50,11 @@ body {
   padding: 6px 12px; cursor: pointer; border-radius: 3px;
 }
 .stage:hover { color: var(--ink); }
-.stage.is-active { color: var(--bench); background: var(--ink); font-weight: 600; }
+.stage.is-active { color: var(--bench); background: var(--green); font-weight: 600; }
+.stage-home { margin-right: 2px; }
+.rail-sep { width: 1px; height: 22px; background: var(--hairline-strong); margin: 0 10px; }
+.step { color: var(--ink-faint); font-size: 11px; margin-right: 5px; }
+.stage.is-active .step { color: var(--bench); opacity: 0.7; }
 .rail-status { margin-left: auto; font-size: 12px; color: var(--ink-faint); }
 
 /* ---- tabs ---- */
@@ -89,7 +94,7 @@ select, input[type="text"], input[type="number"] {
   border: 1px solid var(--hairline-strong);
 }
 .disc-llm { background: transparent; }
-.disc-gold { background: var(--teal); }
+.disc-gold { background: var(--green); }
 .tray-stats { font-size: 12px; color: var(--ink-dim); white-space: pre-line; }
 .tray-hint { font-size: 12px; color: var(--ink-faint); line-height: 1.5; }
 .btn {
@@ -99,16 +104,44 @@ select, input[type="text"], input[type="number"] {
   cursor: pointer;
 }
 .btn:hover { border-color: var(--ink); }
-.btn-primary { background: var(--teal); border-color: var(--teal); color: var(--bench); }
+.btn-primary { background: var(--green); border-color: var(--green); color: var(--bench); }
 .btn-primary:hover { filter: brightness(1.08); }
 .btn-primary:disabled { opacity: 0.4; cursor: default; }
+
+/* ---- projects home ---- */
+.new-project-form { display: flex; gap: 16px; align-items: end; }
+.new-project-form label {
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-dim);
+}
+.new-project-form input[type="text"] { width: 320px; max-width: 70vw; }
+.project-list { border-top: 1px solid var(--hairline-strong); }
+.project-row {
+  appearance: none; width: 100%; text-align: left;
+  display: flex; align-items: center; gap: 18px;
+  padding: 15px 10px; border: 0; border-bottom: 1px solid var(--hairline);
+  background: none; color: var(--ink); cursor: pointer;
+  font-family: var(--sans); font-size: 14px;
+}
+.project-row:hover { background: var(--bench-raised); }
+.proj-name { font-weight: 600; font-size: 15px; }
+.project-row.is-current .proj-name { color: var(--green); }
+.proj-stage {
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-dim); border: 1px solid var(--hairline-strong);
+  border-radius: 3px; padding: 3px 8px; white-space: nowrap;
+}
+.project-row.is-current .proj-stage { color: var(--green); border-color: var(--green); }
+.proj-meta { margin-left: auto; font-size: 12px; color: var(--ink-faint); white-space: nowrap; }
+.proj-open { color: var(--ink-dim); font-size: 13px; }
+.project-row:hover .proj-open { color: var(--green); }
 
 .light-table { position: relative; flex: 1; height: 100%; min-width: 0; display: grid; place-items: center; overflow: hidden; }
 #editor.is-loading { visibility: hidden; }
 /* the lamp: one authored moment — backlight warms up when a frame lands */
 .light-table.lit::before {
   content: ""; position: absolute; inset: 32px; z-index: 0;
-  background: radial-gradient(ellipse at center, rgba(244, 241, 232, 0.5) 0%, rgba(244, 241, 232, 0.05) 78%);
+  background: radial-gradient(ellipse at center, rgba(62, 207, 142, 0.16) 0%, rgba(62, 207, 142, 0.03) 78%);
   opacity: 0; animation: lamp-on 0.7s ease-out forwards;
   pointer-events: none; border-radius: 6px;
 }
@@ -135,7 +168,7 @@ select, input[type="text"], input[type="number"] {
   position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%;
   background: var(--amber); /* llm-only = amber: needs eyes */
 }
-.frame.done .lamp { background: var(--teal); }  /* reviewed into gold */
+.frame.done .lamp { background: var(--green); }  /* reviewed into gold */
 
 .empty-state {
   position: absolute; inset: 48px 0 0 var(--tray-w);
@@ -147,7 +180,7 @@ select, input[type="text"], input[type="number"] {
 .empty-state p { color: var(--ink-dim); }
 
 /* ================= OTHER TABS ================= */
-#tab-ingest, #tab-label, #tab-train, #tab-results {
+#tab-ingest, #tab-label, #tab-train, #tab-results, #tab-projects {
   flex-direction: column; gap: 24px;
   padding: 40px clamp(20px, 6vw, 80px);
   overflow-y: auto;
@@ -161,7 +194,7 @@ select, input[type="text"], input[type="number"] {
   color: var(--ink-dim); cursor: pointer; text-align: center;
   transition: border-color 0.15s ease-out, color 0.15s ease-out;
 }
-.dropzone:hover, .dropzone.is-over { border-color: var(--teal); color: var(--ink); }
+.dropzone:hover, .dropzone.is-over { border-color: var(--green); color: var(--ink); }
 .dz-icon { width: 34px; height: 34px; }
 
 .log-panel, .run-list {

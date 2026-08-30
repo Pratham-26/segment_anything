@@ -86,8 +86,40 @@ def test_metrics_latest_run_and_explicit():
     shutil.rmtree(d)
 
 
+def test_projects_list_create_and_switch():
+    root = Path(tempfile.mkdtemp())
+    a = _mkproj(); b = _mkproj(with_data=False)
+    a.rename(root / "alpha"); b.rename(root / "beta")
+    (root / "beta" / "images" / "img2.png").write_bytes(b"fake")
+    client = TestClient(create_app(str(root / "alpha"), projects_root=str(root)))
+
+    projects = client.get("/api/projects").json()
+    assert [p["name"] for p in projects] == ["alpha", "beta"]
+    assert projects[0]["stage"] == "needs review" and projects[0]["boxes"] == 1
+    assert projects[1]["stage"] == "ready to label"
+
+    # ?project= switches every endpoint
+    assert client.get("/api/status").json()["project"] == "alpha"
+    assert client.get("/api/status", params={"project": "beta"}).json()["project"] == "beta"
+    assert client.get("/api/annotations/llm", params={"project": "beta"}).status_code == 404
+    assert client.get("/api/annotations/llm", params={"project": "alpha"}).status_code == 200
+
+    # create + open
+    r = client.post("/api/projects", json={"name": "gamma 2024"})
+    assert r.status_code == 200 and r.json()["stage"] == "empty"
+    assert (root / "gamma-2024" / "config.yaml").exists()
+    assert client.get("/api/status", params={"project": "gamma-2024"}).json()["project"] == "gamma-2024"
+
+    # bad names rejected; traversal impossible
+    assert client.post("/api/projects", json={"name": "../evil"}).status_code == 400
+    assert client.get("/api/status", params={"project": "../alpha"}).json()["project"] == "alpha"
+
+    shutil.rmtree(root)
+
+
 if __name__ == "__main__":
     test_config_defaults_and_roundtrip()
     test_status_annotations_and_gold_save()
     test_metrics_latest_run_and_explicit()
+    test_projects_list_create_and_switch()
     print("all server/config tests passed")

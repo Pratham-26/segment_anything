@@ -8,7 +8,8 @@ from .config import load_config
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(prog="sam", description="query-driven auto-labeling + RF-DETR training")
+    p = argparse.ArgumentParser(prog="sam", description="query-driven auto-labeling + RF-DETR training",
+                                allow_abbrev=False)
     p.add_argument("--project", default=".", help="project directory (default: cwd)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
@@ -20,9 +21,13 @@ def main(argv=None):
     s.add_argument("--vlm", help="LiteLLM model id (default: config.yaml)")
     s.add_argument("--limit", type=int)
 
-    s = sub.add_parser("review", help="open the annotation web UI")
+    s = sub.add_parser("review", help="open the annotation web UI", allow_abbrev=False)
+    s.add_argument("--project", dest="review_project", default=None,
+                   help="project directory (overrides the global --project)")
     s.add_argument("--port", type=int, default=8000)
     s.add_argument("--host", default="127.0.0.1")
+    s.add_argument("--projects-root", default=None,
+                   help="dir whose subfolders are listed as projects (default: ./projects if present)")
 
     s = sub.add_parser("accept-all", help="promote llm -> gold unedited")
 
@@ -49,7 +54,7 @@ def main(argv=None):
     s = sub.add_parser("status", help="project summary")
 
     a = p.parse_args(argv)
-    P = Path(a.project)
+    P = Path(a.review_project) if getattr(a, "review_project", None) else Path(a.project)
 
     if a.cmd == "ingest":
         from . import ingest
@@ -60,7 +65,7 @@ def main(argv=None):
     elif a.cmd == "review":
         import uvicorn
         from .server import create_app
-        app = create_app(P)
+        app = create_app(P, projects_root=a.projects_root)
         print(f"review UI: http://{a.host}:{a.port}  (project: {P.resolve()})")
         uvicorn.run(app, host=a.host, port=a.port)
         return 0

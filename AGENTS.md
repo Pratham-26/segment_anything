@@ -33,5 +33,6 @@ Then look at actual code state (`git log`, source tree) before assuming anything
 - [x] Core library (coco, config, ingest, label, gold, split, train, evaluate/benchmark)
 - [x] CLI (`sam`) + FastAPI server (`sam review` / `sam.server`)
 - [x] Review UI (web/ — canvas box editor, demo-mode fallback)
+- [x] Multi-project server + Projects home tab (list/open/create; `?project=` scoping); demo projects via `scripts/make_demo_projects.py`
 - [ ] Training/results wiring against real rfdetr (wrappers + rfdetr evaluator wired, untested on GPU)
 - [x] Docker + docker-compose (`docker/annotation.Dockerfile` service + `docker/train.Dockerfile` GPU job container, untested on GPU)

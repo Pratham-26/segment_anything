@@ -7,10 +7,11 @@
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 
-const CLASS_COLORS = ["#4cc2a8", "#e8a13c", "#e05656", "#7aa5e0", "#c88ae0", "#d8d05a", "#e08a9a", "#8ad0c0"];
+const CLASS_COLORS = ["#3ecf8e", "#e5b054", "#7aa5e0", "#c88ae0", "#e0565b", "#8ad0c0", "#d8d05a", "#e08a9a"];
 
 /* ---------- state ---------- */
 const state = {
+  project: null,         // active project name (server-side dir under the projects root)
   images: [],            // [{id, file_name, width, height}]
   current: null,         // image id
   llm: {},               // image_id -> [ann]
@@ -23,24 +24,96 @@ const state = {
 };
 
 /* ---------- API with graceful fallback to synthetic demo data ---------- */
+function apiPath(path) {
+  if (state.project && path.startsWith("/api/") && !path.startsWith("/api/projects")) {
+    path += (path.includes("?") ? "&" : "?") + "project=" + encodeURIComponent(state.project);
+  }
+  return path;
+}
+
 async function api(path, opts) {
-  const r = await fetch(path, opts);
+  const r = await fetch(apiPath(path), opts);
   if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
   return r.json();
 }
 
 async function boot() {
+  state.project = localStorage.getItem("sam.project");
   try {
-    const status = await api("/api/status");
+    const projects = await api("/api/projects");
     state.live = true;
-    $("#project-status").textContent = `project: ${status.project ?? "loaded"}`;
-    await loadReal();
+    if (!state.project || !projects.some(p => p.name === state.project)) {
+      state.project = (await api("/api/status")).project;  // server's default project
+    }
+    await openProject(state.project);
   } catch {
+    state.live = false;
     $("#project-status").textContent = "demo data — no server attached";
+    renderProjectsOffline();
+    switchTab("review");
     loadDemo();
   }
   $$(".needs-server").forEach(el => el.style.display = state.live ? "" : "none");
 }
+
+/* ---------- projects home ---------- */
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+async function openProject(name) {
+  state.project = name;
+  localStorage.setItem("sam.project", name);
+  const st = await api("/api/status");
+  $("#project-status").textContent = `project: ${st.project} · ${st.stage}`;
+  if (st.query && !$("#query-input").value) $("#query-input").value = st.query;
+  if (st.vlm && !$("#vlm-input").value) $("#vlm-input").value = st.vlm;
+  await loadReal();
+  renderProjects(await api("/api/projects"));
+  switchTab(st.has_llm ? "review" : "ingest");
+}
+
+function renderProjects(projects) {
+  const el = $("#project-list");
+  el.innerHTML = "";
+  if (!projects.length) {
+    el.innerHTML = "<p class='tray-hint' style='padding:14px 2px'>No projects yet — create one above.</p>";
+    return;
+  }
+  for (const p of projects) {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "project-row" + (p.name === state.project ? " is-current" : "");
+    const bits = [`${p.images} img`, `${p.boxes} boxes`];
+    if (p.gold) bits.push("gold");
+    if (p.metrics) bits.push("metrics");
+    row.innerHTML =
+      `<span class="proj-name">${esc(p.name)}</span>` +
+      `<span class="proj-stage">${esc(p.stage)}</span>` +
+      (p.name === state.project ? `<span class="proj-open">open now</span>` :
+        `<span class="proj-open">Open →</span>`) +
+      `<span class="proj-meta mono">${esc(bits.join(" · "))}</span>`;
+    row.addEventListener("click", () => openProject(p.name).catch(e => alert(`open failed: ${e.message}`)));
+    el.appendChild(row);
+  }
+}
+
+function renderProjectsOffline() {
+  $("#project-list").innerHTML =
+    "<p class='tray-hint' style='padding:14px 2px'>Projects are managed by the server — start it with <span class='mono'>sam review</span> to list, open, and create projects here.</p>";
+}
+
+$("#new-project-form")?.addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!state.live) return;
+  try {
+    const p = await api("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: $("#new-project-name").value }),
+    });
+    $("#new-project-name").value = "";
+    await openProject(p.name);
+  } catch (err) { alert(`create failed: ${err.message}`); }
+});
 
 async function loadReal() {
   const cocoData = await api("/api/annotations/llm").catch(() => null);
@@ -93,9 +166,17 @@ function hydrate(cocoLlm, goldCoco) {
   for (const a of cocoLlm.annotations) {
     (state.llm[a.image_id] ??= []).push(a);
   }
-  // gold starts as a copy of llm (or loads existing); never mutates llm
-  state.gold = goldCoco ? structuredClone(goldCoco)
-    : structuredClone({ images: cocoLlm.images, annotations: cocoLlm.annotations, categories: cocoLlm.categories });
+  // gold is a copy-on-write working copy: llm everywhere, gold wins on frames it covers.
+  // llm annotations are never mutated.
+  state.gold = structuredClone({ images: cocoLlm.images, annotations: cocoLlm.annotations, categories: cocoLlm.categories });
+  if (goldCoco) {
+    const covered = new Set(goldCoco.images.map(i => i.id));
+    state.gold.images = structuredClone(goldCoco.images);
+    state.gold.annotations = state.gold.annotations.filter(a => !covered.has(a.image_id))
+      .concat(goldCoco.annotations.filter(a => covered.has(a.image_id)));
+  }
+  // frames already reviewed into gold light up as done
+  state.editedFrames = new Set((goldCoco?.annotations ?? []).map(a => a.image_id));
   state.activeClass = state.categories[0]?.name ?? null;
   fillClassSelect();
   buildFilmstrip();
@@ -137,7 +218,7 @@ function buildFilmstrip() {
     b.className = "frame"; b.dataset.id = img.id;
     b.title = img.file_name;
     const im = document.createElement("img");
-    im.src = state.live ? `/api/image/${encodeURIComponent(img.file_name)}` : demoThumb(img);
+    im.src = state.live ? apiPath(`/api/image/${encodeURIComponent(img.file_name)}`) : demoThumb(img);
     im.alt = "";
     b.appendChild(im);
     b.insertAdjacentHTML("beforeend", '<span class="lamp" aria-hidden="true"></span>');
@@ -200,7 +281,7 @@ function loadCanvas() {
     oy = (canvas.parentElement.clientHeight - base.height * scale) / 2;
     draw(base);
   };
-  base.src = state.live ? `/api/image/${encodeURIComponent(img.file_name)}` : demoThumb(img);
+  base.src = state.live ? apiPath(`/api/image/${encodeURIComponent(img.file_name)}`) : demoThumb(img);
 }
 
 let baseImg = null;
@@ -226,11 +307,11 @@ function draw(img) {
     ctx.font = "11px 'JetBrains Mono', monospace";
     const label = catName(a.category_id);
     const tw = ctx.measureText(label).width;
-    ctx.fillStyle = "rgba(20,22,26,0.85)";
+    ctx.fillStyle = "rgba(10,13,10,0.85)";
     ctx.fillRect(ox + x, oy + y - 16, tw + 14, 15);
     ctx.fillStyle = catColor(a.category_id);
     ctx.fillRect(ox + x + 3, oy + y - 12, 6, 6);
-    ctx.fillStyle = "#e6e2d8";
+    ctx.fillStyle = "#e4eae2";
     ctx.fillText(label, ox + x + 13, oy + y - 4.5);
     if (isSel) drawHandles(a);
   }
@@ -238,8 +319,8 @@ function draw(img) {
 
 function drawHandles(a) {
   const [x, y, w, h] = a.bbox.map(v => v * scale);
-  ctx.fillStyle = "#14161a";
-  ctx.strokeStyle = "#e6e2d8";
+  ctx.fillStyle = "#0a0d0a";
+  ctx.strokeStyle = "#e4eae2";
   ctx.lineWidth = 1.5;
   for (const [hx, hy] of handlePts(x, y, w, h)) {
     ctx.beginPath(); ctx.rect(ox + hx - 4, oy + hy - 4, 8, 8); ctx.fill(); ctx.stroke();
@@ -324,7 +405,7 @@ function previewNew() {
   draw(baseImg);
   const x = ox + Math.min(drag.x0, drag.x1) * scale, y = oy + Math.min(drag.y0, drag.y1) * scale;
   const w = Math.abs(drag.x1 - drag.x0) * scale, h = Math.abs(drag.y1 - drag.y0) * scale;
-  ctx.strokeStyle = "#e6e2d8"; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5;
+  ctx.strokeStyle = "#e4eae2"; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5;
   ctx.strokeRect(x, y, w, h); ctx.setLineDash([]);
 }
 
@@ -406,13 +487,12 @@ $("#save-gold").addEventListener("click", async () => {
 });
 
 /* ---------- tabs ---------- */
-$$(".stage").forEach(b => b.addEventListener("click", () => {
-  $$(".stage").forEach(x => x.classList.remove("is-active"));
-  b.classList.add("is-active");
-  $$(".tab").forEach(t => t.classList.remove("is-active"));
-  $(`#tab-${b.dataset.tab}`).classList.add("is-active");
-  if (b.dataset.tab === "results") loadResults();
-}));
+$$(".stage").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+function switchTab(name) {
+  $$(".stage").forEach(x => x.classList.toggle("is-active", x.dataset.tab === name));
+  $$(".tab").forEach(t => t.classList.toggle("is-active", t.id === `tab-${name}`));
+  if (name === "results") loadResults();
+}
 
 /* ---------- ingest / label / train / results wiring ---------- */
 const dropzone = $("#dropzone");

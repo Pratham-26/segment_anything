@@ -16,6 +16,11 @@ project/
 
 ## Stage-by-stage
 
+### 0. Projects home
+- **CLI**: projects are just directories; `sam --project <dir> review` opens one (pass `--projects-root` to change the dir whose subfolders are listed).
+- **UI**: the Projects tab lists every project under the root as a row (name, pipeline stage badge, image/box counts); click to open it, or create a new project by name. All API calls are scoped with `?project=`, so switching projects is instant and stateless.
+- Exit state: one project open; the stage rail acts on it.
+
 ### 1. Ingest (upload / PDF split)
 - **CLI**: `sam ingest ./scans/ --project myproj` — recursive glob, PDFs auto-split to page PNGs, dedup by hash
 - **UI**: drag-drop zone (files or folders); shows ingest progress + thumbnail grid of what was created
