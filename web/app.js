@@ -274,21 +274,31 @@ function loadCanvas() {
   const base = new Image();
   base.onload = () => {
     canvas.classList.remove("is-loading");
-    const maxW = canvas.parentElement.clientWidth - 64;
-    const maxH = canvas.parentElement.clientHeight - 96;
+    const [maxW, maxH] = canvasSize();
     scale = Math.min(maxW / base.width, maxH / base.height, 1);
-    ox = (canvas.parentElement.clientWidth - base.width * scale) / 2;
-    oy = (canvas.parentElement.clientHeight - base.height * scale) / 2;
+    ox = (maxW - base.width * scale) / 2;
+    oy = (maxH - base.height * scale) / 2;
     draw(base);
   };
   base.src = state.live ? apiPath(`/api/image/${encodeURIComponent(img.file_name)}`) : demoThumb(img);
 }
 
+let resizeTimer = null;
+window.addEventListener("resize", () => {  // stale offsets would drift boxes off the image
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { if (state.current != null) loadCanvas(); }, 100);
+});
+
 let baseImg = null;
+const CANVAS_INSET_X = 64, CANVAS_INSET_Y = 96;  // breathing room around the frame
+function canvasSize() {
+  return [canvas.parentElement.clientWidth - CANVAS_INSET_X,
+          canvas.parentElement.clientHeight - CANVAS_INSET_Y];
+}
 function draw(img) {
   baseImg = img;
   const dpr = window.devicePixelRatio || 1;
-  const W = canvas.parentElement.clientWidth, H = canvas.parentElement.clientHeight;
+  const [W, H] = canvasSize();
   canvas.width = W * dpr; canvas.height = H * dpr;
   canvas.style.width = W + "px"; canvas.style.height = H + "px";
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

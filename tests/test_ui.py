@@ -106,6 +106,21 @@ def test_demo_boot_filmstrip_and_banner(browsers, demo_url):
         page.context.browser.close()
 
 
+def test_demo_canvas_is_not_css_scaled(browsers, demo_url):
+    """The canvas bitmap must be displayed 1:1: a CSS max-width/max-height would
+    rescale it, so drawn boxes drift off the image (the 'boxes are off' bug)."""
+    page = browsers.chromium.launch().new_page()
+    try:
+        page.goto(demo_url)
+        _wait_boot(page, 4)
+        assert page.evaluate(
+            "Math.abs(canvas.clientWidth - canvas.width / (window.devicePixelRatio || 1)) < 1 "
+            "&& Math.abs(canvas.clientHeight - canvas.height / (window.devicePixelRatio || 1)) < 1")
+        assert page.evaluate("parseFloat(canvas.style.width) === canvas.clientWidth")
+    finally:
+        page.context.browser.close()
+
+
 def test_demo_draw_marks_edited_and_save_is_noop(browsers, demo_url):
     page = browsers.chromium.launch().new_page()
     try:
