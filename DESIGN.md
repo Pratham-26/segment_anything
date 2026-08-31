@@ -1,5 +1,7 @@
 # Design System: Annotation Light Table
 
+> **SUPERSEDED (2026-08-31).** The UI was rebuilt on shadcn/ui (Vite + React + Tailwind) with the default neutral theme — see `web/src/index.css` for the live tokens and `web/src/components/` for the current surface. This document records the retired green/dark "light table" build (`web/style.css`, deleted); kept for provenance.
+
 Recorded from the built surface (`web/`), not intentions. Direction seed 98f5042f; rethemed to the user-pinned green/dark world (phosphor green on near-black), extended with the projects home.
 
 ## World

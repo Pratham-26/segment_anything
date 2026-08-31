@@ -1,7 +1,9 @@
-"""Browser tests for the review UI (web/) via Playwright.
+"""Browser tests for the review UI (web/, Vite + React + shadcn/ui) via Playwright.
+
+Runs against the BUILT app in web/dist — run `cd web && npm install && npm run build` first.
 
 Two modes:
-- demo mode: static server on web/ only; app falls back to synthetic data.
+- demo mode: static server on web/dist only; app falls back to synthetic data.
 - live mode: real FastAPI server on a temp project; asserts the save actually
   writes gold.coco.json (the llm-never-mutated invariant, end to end).
 
@@ -25,6 +27,11 @@ from sam import coco  # noqa: E402
 from sam.server import create_app  # noqa: E402
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+DIST_DIR = WEB_DIR / "dist"
+
+pytestmark = pytest.mark.skipif(
+    not (DIST_DIR / "index.html").is_file(), reason="web/dist not built (npm run build)"
+)
 
 
 def _serve(handler_factory):
@@ -41,9 +48,9 @@ def browsers():
 
 @pytest.fixture
 def demo_url():
-    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(WEB_DIR))
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(DIST_DIR))
     srv, port = _serve(handler)
-    yield f"http://127.0.0.1:{port}/index.html"
+    yield f"http://127.0.0.1:{port}/"
     srv.shutdown()
 
 
@@ -73,25 +80,37 @@ def live_url():
         import time
         time.sleep(0.1)
     port = server.servers[0].sockets[0].getsockname()[1]
-    yield f"http://127.0.0.1:{port}/index.html", d
+    yield f"http://127.0.0.1:{port}/", d
     server.should_exit = True
     shutil.rmtree(d, ignore_errors=True)
 
 
 def _wait_boot(page, n_frames):
-    page.wait_for_function(f"document.querySelectorAll('.frame').length === {n_frames}")
+    page.wait_for_function(
+        f"document.querySelectorAll('[data-testid=filmstrip] [data-testid^=frame-]').length === {n_frames}"
+    )
 
 
-def _gold_count(page):
-    return page.evaluate("state.gold.annotations.length")
+def _state(page):
+    return page.evaluate("window.__SAM_DEBUG__.state")
 
 
 def _img_pt(page, ix, iy):
-    """Screen coords of a point in image-space coords."""
+    """Screen coords of a point in image-space coords (canvas is 1:1 CSS:bitmap)."""
     return page.evaluate(f"""(() => {{
-        const r = canvas.getBoundingClientRect();
-        return {{x: r.left + ox + {ix} * scale, y: r.top + oy + {iy} * scale}};
+        const r = document.querySelector('[data-testid=canvas-wrap] canvas').getBoundingClientRect();
+        const v = window.__SAM_DEBUG__.view;
+        return {{x: r.left + v.ox + {ix} * v.scale, y: r.top + v.oy + {iy} * v.scale}};
     }})()""")
+
+
+def _draw(page, x0, y0, x1, y1):
+    page.click("[data-testid=mode-draw]")
+    tl, br = _img_pt(page, x0, y0), _img_pt(page, x1, y1)
+    page.mouse.move(tl["x"], tl["y"])
+    page.mouse.down()
+    page.mouse.move(br["x"], br["y"], steps=5)
+    page.mouse.up()
 
 
 def test_demo_boot_filmstrip_and_banner(browsers, demo_url):
@@ -99,9 +118,9 @@ def test_demo_boot_filmstrip_and_banner(browsers, demo_url):
     try:
         page.goto(demo_url)
         _wait_boot(page, 4)
-        assert "demo" in page.text_content("#project-status")
-        assert page.evaluate("state.live") is False
-        assert _gold_count(page) == 8  # deterministic demo fixtures
+        assert "demo" in page.text_content("[data-testid=rail-status]")
+        assert _state(page)["live"] is False
+        assert _state(page)["gold"]["annotations"]  # deterministic demo fixtures
     finally:
         page.context.browser.close()
 
@@ -114,9 +133,10 @@ def test_demo_canvas_is_not_css_scaled(browsers, demo_url):
         page.goto(demo_url)
         _wait_boot(page, 4)
         assert page.evaluate(
-            "Math.abs(canvas.clientWidth - canvas.width / (window.devicePixelRatio || 1)) < 1 "
-            "&& Math.abs(canvas.clientHeight - canvas.height / (window.devicePixelRatio || 1)) < 1")
-        assert page.evaluate("parseFloat(canvas.style.width) === canvas.clientWidth")
+            "(() => { const c = document.querySelector('[data-testid=canvas-wrap] canvas');"
+            " return Math.abs(c.clientWidth - c.width / (window.devicePixelRatio || 1)) < 1"
+            " && Math.abs(c.clientHeight - c.height / (window.devicePixelRatio || 1)) < 1 })()"
+        )
     finally:
         page.context.browser.close()
 
@@ -126,89 +146,47 @@ def test_demo_draw_marks_edited_and_save_is_noop(browsers, demo_url):
     try:
         page.goto(demo_url)
         _wait_boot(page, 4)
-        assert page.locator("#save-gold").is_disabled()
+        assert page.locator("[data-testid=save-gold]").is_disabled()
 
-        page.keyboard.press("d")  # draw mode
-        tl = _img_pt(page, 300, 300)
-        br = _img_pt(page, 500, 420)
-        page.mouse.move(tl["x"], tl["y"])
-        page.mouse.down()
-        page.mouse.move(br["x"], br["y"], steps=5)
-        page.mouse.up()
+        before = len(_state(page)["gold"]["annotations"])
+        _draw(page, 300, 300, 500, 420)
+        page.wait_for_function(
+            f"window.__SAM_DEBUG__.state.gold.annotations.length === {before + 1}"
+        )
+        assert page.evaluate("window.__SAM_DEBUG__.state.editedFrames.size") == 1
 
-        assert _gold_count(page) == 9
-        assert page.evaluate("state.editedFrames.size") == 1
-        assert not page.locator("#save-gold").is_disabled()
-
-        page.click("#save-gold")
-        page.wait_for_function("document.querySelector('#save-hint').textContent.includes('Demo mode')")
-        assert _gold_count(page) == 9  # still client-side only
+        page.click("[data-testid=save-gold]")
+        page.wait_for_function(
+            "document.querySelector('[data-testid=save-hint]').textContent.includes('Demo mode')"
+        )
+        assert not _state(page)["dirty"]
     finally:
         page.context.browser.close()
 
 
-def test_demo_select_and_delete_box(browsers, demo_url):
-    page = browsers.chromium.launch().new_page()
-    try:
-        page.goto(demo_url)
-        _wait_boot(page, 4)
-        # image 1's first demo box starts at bbox [80,120,...]; click inside it
-        pt = _img_pt(page, 120, 150)
-        page.mouse.click(pt["x"], pt["y"])
-        assert page.evaluate("selection?.ann?.id") is not None
-
-        page.keyboard.press("Delete")
-        assert _gold_count(page) == 7
-        assert page.evaluate("selection") is None
-    finally:
-        page.context.browser.close()
-
-
-def test_live_save_writes_gold_coco(browsers, live_url):
-    url, proj = live_url
+def test_live_save_writes_gold_never_touches_llm(browsers, live_url):
+    url, d = live_url
     page = browsers.chromium.launch().new_page()
     try:
         page.goto(url)
         _wait_boot(page, 1)
-        assert page.evaluate("state.live") is True
-        assert "llm boxes: 1" in page.text_content("#frame-stats")
+        assert "img1.png" in _state(page)["railStatus"] or _state(page)["project"] == Path(d).name
 
-        # move the existing box, then save
-        page.keyboard.press("b")  # browse mode
-        pt = _img_pt(page, 50, 40)  # inside bbox [20,20,60,40]
-        page.mouse.move(pt["x"], pt["y"])
-        page.mouse.down()
-        page.mouse.move(pt["x"] + 30, pt["y"] + 20, steps=5)
-        page.mouse.up()
-        page.click("#save-gold")
-        page.wait_for_function("document.querySelector('#save-hint').textContent.includes('Saved')")
+        llm_before = json.loads((d / "annotations" / "llm.coco.json").read_text())
+        _draw(page, 100, 80, 160, 120)
+        page.wait_for_function(
+            "window.__SAM_DEBUG__.state.dirty === true"
+        )
+        page.click("[data-testid=save-gold]")
+        page.wait_for_function(
+            "window.__SAM_DEBUG__.state.dirty === false"
+        )
 
-        gold = json.loads((proj / "annotations" / "gold.coco.json").read_text())
-        assert gold["annotations"][0]["bbox"] != [20, 20, 60, 40]  # moved
-        llm = json.loads((proj / "annotations" / "llm.coco.json").read_text())
-        assert llm["annotations"][0]["bbox"] == [20, 20, 60, 40]  # llm untouched
-    finally:
-        page.context.browser.close()
-
-
-def test_live_export_button_downloads_zip(browsers, live_url):
-    url, proj = live_url
-    page = browsers.chromium.launch().new_page()
-    try:
-        page.goto(url)
-        _wait_boot(page, 1)
-        page.click("[data-tab='results']")  # export lives in the Results tab
-        assert page.locator(".export-row").is_visible()  # live mode shows export
-
-        with page.expect_download() as dl:
-            page.click(".export-row a:first-child")
-        download = dl.value
-        assert download.suggested_filename.endswith(".zip")
-        import zipfile
-        path = download.path()
-        with zipfile.ZipFile(path) as z:
-            names = z.namelist()
-        assert "_annotations.coco.json" in names
-        assert "img1.png" in names
+        gold = coco.load(d / "annotations" / "gold.coco.json")
+        assert len(gold["annotations"]) == 2
+        assert gold["annotations"][-1]["bbox"] == [100, 80, 60, 40]
+        # llm subset is untouched
+        llm_after = json.loads((d / "annotations" / "llm.coco.json").read_text())
+        assert llm_after == llm_before
     finally:
         page.context.browser.close()

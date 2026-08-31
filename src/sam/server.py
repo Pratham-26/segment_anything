@@ -12,6 +12,7 @@ from . import export as export_mod
 from .config import load_config, save_config
 
 WEB_DIR = Path(__file__).resolve().parent.parent.parent / "web"
+WEB_DIST = WEB_DIR / "dist"  # built by `npm run build` inside web/ (Vite + React + shadcn/ui)
 
 
 def create_app(project: str = ".", projects_root: str | None = None) -> FastAPI:
@@ -171,5 +172,13 @@ def create_app(project: str = ".", projects_root: str | None = None) -> FastAPI:
         path = export_mod.export_project(proj(project), with_split=split)
         return FileResponse(path, filename=path.name, media_type="application/zip")
 
-    app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
+    if (WEB_DIST / "index.html").is_file():
+        app.mount("/", StaticFiles(directory=WEB_DIST, html=True), name="web")
+    else:
+        @app.get("/")
+        def ui_not_built():
+            return JSONResponse(
+                {"error": "review UI not built", "fix": "cd web && npm install && npm run build"},
+                status_code=503,
+            )
     return app

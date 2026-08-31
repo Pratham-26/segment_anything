@@ -11,4 +11,13 @@ projects/*
 !projects/README.md
 .env
 node_modules/
-package*.json
+# root-only npm files (the unrelated pi-glm-usage package.json); web/package.json is tracked
+/package.json
+/package-lock.json
+
+# review UI build output + deps
+web/node_modules/
+web/dist/
+
+# agent session data
+.pi/

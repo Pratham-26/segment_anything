@@ -9,15 +9,23 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv /opt/venv && \
     uv pip install --python /opt/venv/bin/python '-e .'
 
+# Build the review UI (Vite + React + shadcn/ui) → web/dist
+FROM node:22-slim AS ui
+WORKDIR /ui
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+COPY web ./
+RUN npm run build
+
 FROM python:3.11-slim
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 COPY --from=build /opt/venv /opt/venv
-# editable install points at /app/src; server serves /app/web
+# editable install points at /app/src; server serves /app/web/dist
 WORKDIR /app
 COPY src ./src
-COPY web ./web
+COPY --from=ui /ui/dist ./web/dist
 
 # projects dir is bind-mounted at /data
 WORKDIR /data

@@ -84,6 +84,10 @@ tests in `tests/`. Design docs: `docs/prd.md`, `docs/state-diagram.md`,
 ## Development
 
 ```bash
-uv run pytest              # 13 offline API/pipeline tests
-uv run pytest tests/test_ui.py   # + 4 browser tests (needs playwright browsers)
+uv run pytest              # Python API/pipeline tests (test_ui.py needs playwright + a built UI)
+cd web && npm install && npm run test   # 66 frontend tests (Vitest + Testing Library)
+cd web && npm run build    # build the review UI to web/dist (required by sam review)
 ```
+
+For UI development, run `sam review` and `cd web && npm run dev` side by side;
+the Vite dev server proxies `/api` to :8000.

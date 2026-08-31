@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-Delegated and already decided in `docs/architecture.md`: FastAPI backend serving static vanilla HTML/CSS/JS frontend (no framework, no bundler); Python CLI (`sam`) over the same core library. Docker-native deployment.
+Delegated and already decided in `docs/architecture.md`: FastAPI backend serving the Vite + React + TypeScript + Tailwind review UI with shadcn/ui components (built to `web/dist`); Python CLI (`sam`) over the same core library. Docker-native deployment.
 
 ## Users
 

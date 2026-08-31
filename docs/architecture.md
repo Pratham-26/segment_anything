@@ -10,7 +10,7 @@
 | PDF → images | `pypdfium2` | Google's PDFium bindings — fastest Python rasterizer, no system deps (PyMuPDF heavier + AGPL) |
 | CLI | `argparse` (stdlib) | ~8 subcommands; no dep needed |
 | Backend API | `fastapi` + `uvicorn` | serves the annotation UI + JSON API from the same process as `sam review` |
-| Frontend | **vanilla HTML/JS, no framework, no bundler** | one canvas editor page + one results dashboard; a build step buys nothing here |
+| Frontend | **Vite + React + TypeScript + Tailwind, shadcn/ui components** | typed component tree for the canvas editor + dashboards; tests run in Vitest + Testing Library |
 
 ## File structure
 ```
@@ -35,10 +35,11 @@ segment_anything/
 │   ├── evaluate.py         # mAP@50 / @50:95 / per-class AP on validation; VLM-vs-gold benchmark
 │   ├── export.py           # project → COCO zip (gold-wins merge; --split → train/valid layout)
 │   └── server.py           # FastAPI: static files + REST endpoints over core functions
-├── web/
-│   ├── index.html          # tabs: Ingest / Label / Review / Train / Results
-│   ├── app.js              # state fetch/render + canvas box editor
-│   └── style.css
+├── web/                    # review UI (Vite + React + TS + Tailwind + shadcn/ui)
+│   ├── src/components/     # views + canvas editor; src/components/ui = shadcn primitives
+│   ├── src/lib/            # api client, COCO merge, bbox geometry, demo fixtures
+│   ├── src/hooks/useStudio.tsx  # reducer store (llm never mutated; edits go to gold)
+│   └── dist/               # build output served by the server (npm run build)
 └── tests/
     └── test_*.py           # split leakage rule, COCO roundtrip, correction-rate diff
 ├── projects/               # on-host project data; bind-mounted as /data in containers
