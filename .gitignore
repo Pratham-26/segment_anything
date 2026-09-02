@@ -21,3 +21,5 @@ web/dist/
 
 # agent session data
 .pi/
+
+.train_sync.log
