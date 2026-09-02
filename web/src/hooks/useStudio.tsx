@@ -28,6 +28,7 @@ export interface StudioState {
   activeClass: string | null
   query: string
   vlm: string
+  vlms: string[]
   metrics: MetricsT | null
   correctionRate: string | null
   error: string | null
@@ -72,6 +73,7 @@ const initialState: StudioState = {
   activeClass: null,
   query: "",
   vlm: "",
+  vlms: [],
   metrics: null,
   correctionRate: null,
   error: null,
@@ -86,6 +88,7 @@ function reducer(s: StudioState, a: Action): StudioState {
         live: false,
         railStatus: "demo data — no server attached",
         tab: "review",
+        vlms: ["gemini/gemini-2.0-flash", "openai/gpt-4o-mini"],
         ...hydrate(s, demoCoco(), null),
       }
     case "setProjects":
@@ -99,6 +102,7 @@ function reducer(s: StudioState, a: Action): StudioState {
         railStatus: a.status ? `project: ${a.status.project} · ${a.status.stage}` : s.railStatus,
         query: a.status?.query && !s.query ? a.status.query : s.query,
         vlm: a.status?.vlm && !s.vlm ? a.status.vlm : s.vlm,
+        vlms: a.status?.vlms ?? s.vlms,
         tab: a.llm && a.llm.images.length > 0 ? "review" : "ingest",
         ...hydrate(s, a.llm, a.gold),
       }

@@ -1,10 +1,12 @@
-"""Vision-LLM labeling via LiteLLM: images + query -> annotations/llm.coco.json.
+"""
+Vision-LLM labeling via LiteLLM: images + query -> annotations/llm.coco.json.
 
 Model choice is entirely user config (any LiteLLM-supported VLM).
 Responses are cached on disk; re-runs with the same image+query+model are free.
 """
 import base64
 import hashlib
+import logging
 import json
 import re
 import time
@@ -144,7 +146,7 @@ def label_project(project, query=None, model=None, limit=None):
             try:
                 raw = query_vlm(path, query, model)
             except Exception as e:  # log and move on; fix later via gold/review
-                print(f"[warn] {path.name}: {e}")
+                logging.getLogger("sam.label").warning("%s: VLM call failed: %s", path.name, e)
                 failures.append({"image": path.name, "error": str(e)})
                 continue
             cpath.parent.mkdir(parents=True, exist_ok=True)

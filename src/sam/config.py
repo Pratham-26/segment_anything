@@ -4,6 +4,7 @@ from pathlib import Path
 DEFAULTS = {
     "query": None,
     "vlm": None,
+    "vlms": [],  # preferred VLM shortlist (LiteLLM ids); first entry is the default pick
 }
 
 
@@ -17,6 +18,8 @@ def load_config(project):
     cfg = dict(DEFAULTS)
     if p.exists():
         cfg.update(yaml.safe_load(p.read_text()) or {})
+    if not isinstance(cfg.get("vlms"), list):  # tolerate hand-edited yaml
+        cfg["vlms"] = []
     return cfg
 
 

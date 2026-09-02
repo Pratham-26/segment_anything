@@ -20,7 +20,7 @@ def eval_run(project, run_name):
     try: sys.stdout.reconfigure(encoding="utf-8")
     except Exception: pass
     os.environ["PYTHONIOENCODING"] = "utf-8"  # ponytail: rich tables need utf-8 on Windows
-    from rfdetr import RFDETRNano
+    from .train import load_model_for_run  # registry: no model class named here
 
     project = Path(project)
     run_dir = project / "runs" / run_name
@@ -39,7 +39,7 @@ def eval_run(project, run_name):
     if not dataset_dir.exists():
         raise SystemExit(f"no dataset at {dataset_dir}")
 
-    model = RFDETRNano.from_checkpoint(str(ckpt))
+    model = load_model_for_run(run_dir, ckpt)
     raw = model.evaluate(dataset_dir=str(dataset_dir), split="val", num_workers=0)
 
     # raw keys look like "val/mAP_50", "val/mAP_50_95", "val/AP/<class>"
@@ -54,10 +54,27 @@ def eval_run(project, run_name):
     return result
 
 
+def benchmark_multi(project, models, limit=None):
+    """Score several VLMs against the same gold sample (same images, same query).
+    Returns {"models": [...], "limit": n, "results": [per-model dicts]} so runs
+    are directly comparable."""
+    models = list(models)
+    if not models:
+        raise SystemExit("no models given")
+    return {
+        "models": models,
+        "limit": limit,
+        "results": [benchmark(project, model=m, limit=limit) for m in models],
+    }
+
+
 def benchmark(project, model, limit=None):
     """Run a VLM on gold images and score its boxes against gold annotations.
-    A match = IoU > 0.5 with the same class name."""
-    from .label import query_vlm, to_px
+    A match = IoU > 0.5 with the same class name. Reuses the same on-disk cache
+    as labeling (image+query+model), so re-benchmarks are free."""
+    import json
+
+    from .label import _cache_path, query_vlm, to_px
     from .config import load_config
 
     project = Path(project)
@@ -75,7 +92,13 @@ def benchmark(project, model, limit=None):
     matched = missed = spurious = 0
     for img in images:
         path = project / "images" / img["file_name"]
-        raw = query_vlm(path, query=query, model=model)
+        cpath = _cache_path(project, path, model=model, query=query)
+        if cpath.exists():
+            raw = json.loads(cpath.read_text())
+        else:
+            raw = query_vlm(path, query=query, model=model)
+            cpath.parent.mkdir(parents=True, exist_ok=True)
+            cpath.write_text(json.dumps(raw))
         boxes = to_px(raw, img["width"], img["height"])
         fake_pred = [{"bbox": b["bbox"], "category_id": b["label"]} for b in boxes]
         fake_true = [{"bbox": a["bbox"], "category_id": gold_cat[a["category_id"]]}

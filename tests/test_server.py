@@ -110,9 +110,14 @@ def test_projects_list_create_and_switch():
     assert (root / "gamma-2024" / "config.yaml").exists()
     assert client.get("/api/status", params={"project": "gamma-2024"}).json()["project"] == "gamma-2024"
 
-    # bad names rejected; traversal impossible
+    # bad names rejected; traversal impossible; unknown projects 404 (no silent fallback)
     assert client.post("/api/projects", json={"name": "../evil"}).status_code == 400
-    assert client.get("/api/status", params={"project": "../alpha"}).json()["project"] == "alpha"
+    r = client.get("/api/status", params={"project": "../alpha"})
+    assert r.status_code == 400 and "error" in r.json()
+    r = client.get("/api/status", params={"project": "no-such-project"})
+    assert r.status_code == 404 and "error" in r.json()
+    # no project param still resolves to the default project
+    assert client.get("/api/status").json()["project"] == "alpha"
 
     shutil.rmtree(root)
 

@@ -13,6 +13,22 @@ describe("LabelView", () => {
     expect(screen.getByLabelText("Vision LLM")).toBeInTheDocument()
   })
 
+  it("offers a picker of configured VLMs and fills the input from it", async () => {
+    renderWithStudio(<LabelView />, { live: true })
+    const picker = screen.getByTestId("vlm-picker")
+    await user.click(picker)
+    await user.click(await screen.findByRole("option", { name: "m/two" }))
+    expect(screen.getByLabelText("Vision LLM")).toHaveValue("m/two")
+    // free-text still wins once typed
+    await user.type(screen.getByLabelText("Vision LLM"), "!")
+    expect(screen.getByLabelText("Vision LLM")).toHaveValue("m/two!")
+  })
+
+  it("demo mode also offers the picker (demo shortlist)", () => {
+    renderWithStudio(<LabelView />, { demo: true })
+    expect(screen.queryByTestId("vlm-picker")).toBeInTheDocument()
+  })
+
   it("in demo mode logs the equivalent sam label command", async () => {
     const fetchFn = vi.fn()
     vi.stubGlobal("fetch", fetchFn)

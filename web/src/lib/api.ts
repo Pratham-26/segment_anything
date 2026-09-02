@@ -1,4 +1,4 @@
-import type { Coco, CorrectionsT, MetricsT, ProjectT, StatusT } from "./types"
+import type { BenchT, Coco, CorrectionsT, MetricsT, ProjectT, RunT, StatusT } from "./types"
 
 /**
  * Thin REST client for the FastAPI server. Every /api path except the project
@@ -63,5 +63,24 @@ export function train(project: string | null, variant: string, epochs: string) {
 
 export const getMetrics = (project: string | null) => api<MetricsT>("/api/metrics", project)
 
+export const getRunMetrics = (project: string | null, run: string) =>
+  api<MetricsT & { run: string }>(`/api/metrics/${encodeURIComponent(run)}`, project)
+
+export const getRuns = (project: string | null) => api<RunT[]>("/api/runs", project)
+
 export const getCorrections = (project: string | null) =>
   api<CorrectionsT>("/api/corrections", project)
+
+/** Score one or more VLMs (LiteLLM ids) against the same gold sample. */
+export async function getBenchmark(
+  project: string | null,
+  models: string[],
+  limit: number,
+): Promise<BenchT[]> {
+  const r = await api<BenchT | { results?: BenchT[] }>(
+    `/api/benchmark?model=${encodeURIComponent(models.join(","))}&limit=${limit}`,
+    project,
+  )
+  if ((r as { results?: BenchT[] }).results) return (r as { results: BenchT[] }).results
+  return [r as BenchT]
+}

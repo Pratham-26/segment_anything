@@ -46,7 +46,7 @@ function LiveBoot() {
     dispatch({
       type: "openProject",
       project: "p1",
-      status: { project: "p1", stage: "labeled", has_llm: true },
+      status: { project: "p1", stage: "labeled", has_llm: true, vlms: ["m/one", "m/two"] },
       llm: oneImageCoco,
       gold: null,
     })

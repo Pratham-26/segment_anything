@@ -83,7 +83,11 @@ def main(argv=None):
         out = evaluate_mod.eval_run(P, a.run)
     elif a.cmd == "benchmark":
         from . import evaluate as evaluate_mod
-        out = evaluate_mod.benchmark(P, model=a.vlm, limit=a.limit)
+        models = [m.strip() for m in a.vlm.split(",") if m.strip()]
+        if len(models) > 1:
+            out = evaluate_mod.benchmark_multi(P, models, limit=a.limit)
+        else:
+            out = evaluate_mod.benchmark(P, model=models[0], limit=a.limit)
     elif a.cmd == "corrections":
         from . import gold
         out = gold.diff_stats(P)

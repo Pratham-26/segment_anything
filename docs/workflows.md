@@ -6,7 +6,7 @@ One core library (`core`: ingest, label, review-store, split, train, eval). CLI 
 ## Project layout (single source of truth)
 ```
 project/
-  config.yaml          # query, VLM choice, RF-DETR variant, min-gold size
+  config.yaml          # query, VLM choice (+ vlms shortlist), RF-DETR variant, min-gold size
   images/              # ingested page images
   annotations/
     llm.coco.json      # raw VLM labels

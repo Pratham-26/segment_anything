@@ -3,6 +3,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useStudio } from "@/hooks/useStudio"
 import * as api from "@/lib/api"
 
@@ -76,6 +83,20 @@ export function LabelView() {
               placeholder="gemini/gemini-2.0-flash"
               required
             />
+            {state.vlms.length > 0 && (
+              <Select value="" onValueChange={(v) => setTypedVlm(v)}>
+                <SelectTrigger data-testid="vlm-picker" aria-label="Pick a configured VLM">
+                  <SelectValue placeholder="pick a configured model…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {state.vlms.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <Button type="submit">Label images</Button>
         </form>

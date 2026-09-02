@@ -179,13 +179,16 @@ describe("App live flow", () => {
         if (init?.method === "PUT") return { body: {} }
         return { status: 404, body: null }
       }
-      if (path === "/api/metrics") {
+      if (path === "/api/runs") {
         return {
-          body: {
-            map50: "0.71",
-            map50_95: "0.52",
-            per_class: { cat: "0.68" },
-          },
+          body: [
+            { run: "run_a", variant: "rf-detr-nano", epochs: 2, status: "done", metrics: { map50: "0.71", map50_95: "0.52" } },
+          ],
+        }
+      }
+      if (path === "/api/metrics/run_a") {
+        return {
+          body: { run: "run_a", map50: "0.71", map50_95: "0.52", per_class: { cat: "0.68" } },
         }
       }
       if (path === "/api/corrections") return { body: { correction_rate: "12.5%" } }

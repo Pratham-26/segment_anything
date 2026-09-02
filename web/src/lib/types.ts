@@ -40,12 +40,31 @@ export interface StatusT {
   has_llm: boolean
   query?: string
   vlm?: string
+  vlms?: string[]
+}
+
+export interface BenchT {
+  model: string
+  images: number
+  matched: number
+  missed: number
+  spurious: number
+  precision: number | null
+  recall: number | null
 }
 
 export interface MetricsT {
   map50: string
   map50_95: string
   per_class?: Record<string, string>
+}
+
+export interface RunT {
+  run: string
+  variant: string | null
+  epochs: number | null
+  status: string
+  metrics: { map50: string; map50_95: string } | null
 }
 
 export interface CorrectionsT {

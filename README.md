@@ -40,6 +40,8 @@ uv run sam split                         # 10% val, gold forced into val
 uv run sam train --variant rf-detr-nano --epochs 50   # needs --extra train
 uv run sam eval <run_name>               # metrics on the val set
 uv run sam benchmark --vlm gpt-4o        # score the VLM itself against gold
+uv run sam benchmark --vlm gpt-4o,gemini/gemini-2.0-flash --limit 20
+                                         # compare VLMs on the same gold sample
 uv run sam corrections                   # llm-vs-gold correction stats
 uv run sam export                        # COCO zip (gold wins); --split for train/valid layout
 ```
@@ -91,3 +93,26 @@ cd web && npm run build    # build the review UI to web/dist (required by sam re
 
 For UI development, run `sam review` and `cd web && npm run dev` side by side;
 the Vite dev server proxies `/api` to :8000.
+
+## Production notes
+
+- **API keys**: every VLM call goes through LiteLLM; set the provider key in the
+  environment (`OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`, …) or in
+  a `.env` file. Model ids are always user config (`--vlm`, `config.yaml: vlm`),
+  never hardcoded.
+- **Multi-model**: `config.yaml: vlms` holds a preferred-model shortlist; the
+  Label UI offers it as a picker (free-text LiteLLM ids still work). Compare
+  VLMs on one gold sample with `sam benchmark --vlm a,b --limit 20`.
+- **Detector runs**: every run writes `runs/<run>/run.json` (variant, epochs,
+  status); `sam eval <run>` evaluates with that run's own variant; the Results
+  UI lists and compares runs per variant.
+- **Limits**: `label`/`benchmark` accept `limit`; the server caps it at 10000.
+  Keep `--limit` small when sampling; training cost scales with images × epochs.
+- **Robustness**: bad project names, unknown projects, malformed gold payloads
+  and out-of-range params return 4xx JSON (never a traceback). VLM calls retry
+  on rate limits (1s, 2s backoff) and per-image failures are logged into the
+  label summary (`failed_images`) without aborting the run.
+- **Serving**: `sam review --host 0.0.0.0 --port 8000` behind a reverse proxy is
+  the intended single-user deployment; the UI is static (`web/dist`), so a CDN
+  or any static host also works with `VITE`-built assets and the FastAPI server
+  (or any implementation of `/api/*`) elsewhere.
